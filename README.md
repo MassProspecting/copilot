@@ -49,7 +49,7 @@ echo -e 'What is the most impressive invention of Leonardo Davinci?' > ~/some.te
 Then, you can refer Jarvis to such a file to find an instruction.
 
 ```ruby
-p jarvis.q('I wrote some instructions in the file ~/jarvis.txt. Please read it and')
+p jarvis.q('I wrote some instructions in the file ~/jarvis.txt. Please read it and answer.')
 # => "The most impressive invention of Leonardo Davinci is the the flying machine."
 ```
 
