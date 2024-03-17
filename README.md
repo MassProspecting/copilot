@@ -53,7 +53,11 @@ p jarvis.q('I wrote some instructions in the file ~/jarvis.txt. Please read it a
 # => "The most impressive invention of Leonardo Davinci is the the flying machine."
 ```
 
-In the next sections, we'll store some information in files like passwords of SSH credentials. 
+In the next sections, we'll store some information in files like:
+
+- passwords to access some web platforms,
+- step by step instructions to perform some operations in such web platforms,
+- ssh credentials to access remote computers. 
 
 ## 3. Operating with other computers
 
