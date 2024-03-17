@@ -1,0 +1,11 @@
+require 'down' #, '~>5.4.1'
+require 'openai' #, '~>6.3.1'
+require 'adspower-client' #, '~>1.0.8'
+require 'my-dropbox-api' #, '~>1.0.1'
+require 'colorize' #, '~>0.8.1'
+require 'pry' #, '~>0.14.1'
+require 'blackstack-core' #, '~>1.2.15'
+require 'blackstack-nodes' #, '~>1.2.12'
+require 'simple_cloud_logging' #, '~>1.2.2'
+require 'simple_command_line_parser' #, '~>1.1.2'
+
