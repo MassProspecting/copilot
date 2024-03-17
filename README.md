@@ -9,18 +9,20 @@ An AI-RPA agent based on
 3. SSH interface to interact with other systems, and
 4. GPT to natural language instructions
 
-## Installation
+## 1. Getting Started
+
+1. Install the library.
 
 ```bash
 gem install blackstack-jarvis
 ```
 
-## Getting Started
+2. Create an instance of Jarvis.
 
 ```ruby
 require 'blackstack-jarvis'
 
-j = BlackStack::Jarvis.new(
+jarvis = BlackStack::Jarvis.new(
     # ths is to connect with your OpenAI account.
     # reference: https://platform.openai.com/docs/api-reference/authentication
     openai_api_key: '<your open AI api key here>',
@@ -36,3 +38,25 @@ j = BlackStack::Jarvis.new(
 )
 ```
 
+## 2. Operating with your local computer
+
+Create a text file with a command like this:
+
+```bash
+echo -e 'What is the most impressive invention of Leonardo Davinci?' > ~/some.text
+```
+
+Then, you can refer Jarvis to such a file to find an instruction.
+
+```ruby
+p jarvis.q('I wrote some instructions in the file ~/jarvis.txt. Please read it and')
+# => "The most impressive invention of Leonardo Davinci is the the flying machine."
+```
+
+In the next sections, we'll store some information in files like passwords of SSH credentials. 
+
+## 3. Operating with other computers
+
+## 4. Operating with browsers
+
+## 5. Operating with websites
