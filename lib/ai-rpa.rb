@@ -18,12 +18,27 @@ module BlackStack
         @@adspower_api_key = nil
         @@dropbox_refresh_token = nil
     
+        def initialize(h={})
+            errors = []
+
+            errors << ':openai_api_key is mandatory' if h[:openai_api_key].nil?
+            errors << ':openai_model is mandatory' if h[:openai_model].nil?
+            #errors << ':adspower_api_key is mandatory' if h[:adspower_api_key].nil?
+            #errors << ':dropbox_refresh_token is mandatory' if h[:dropbox_refresh_token].nil?
+            raise "Jarvis Initialization Error: #{errors.join(', ')}" if errors.size > 0
+            
+            @@openai_api_key = h[:openai_api_key] if h[:openai_api_key]
+            @@openai_model = h[:openai_model] if h[:openai_model]
+            @@adspower_api_key = h[:adspower_api_key] if h[:adspower_api_key]
+            @@dropbox_refresh_token = h[:dropbox_refresh_token] if h[:dropbox_refresh_token]
+        end
+
         # for internal use only
-        def self.openai(prompt)
-            client = OpenAI::Client.new(access_token: OPENAI_API_KEY)
-            ret = client.chat(
+        def chat(prompt)
+            openai_client = OpenAI::Client.new(access_token: @@openai_api_key)
+            ret = openai_client.chat(
                 parameters: {
-                    model: OPENAI_MODEL, # Required.
+                    model: @@openai_model, # Required.
                     temperature: 0.5,
                     messages: [
                         { role: "user", content: prompt},
