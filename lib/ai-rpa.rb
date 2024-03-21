@@ -51,27 +51,27 @@ module BlackStack
                     name: "OpenAI-Ruby test assistant", 
                     description: nil,
                     instructions: OPENAI_INSTRUCTIONS,
-=begin
                     tools: [
                         {"type": "code_interpreter"}, 
                         {"type": "retrieval"}, 
                         {
                             type: "function",
-                            name: "run_command_in_local_computer",
-                            description: "Run a bash command in the local computer",
-                            parameters: {
-                                type: :object,
-                                properties: {
-                                    command: {
-                                        type: :string,
-                                        description: "A bash command.",
+                            function: {
+                                name: "run_command_in_local_computer",
+                                description: "Run a bash command in the local computer",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        command: {
+                                            type: :string,
+                                            description: "A bash command.",
+                                        },
                                     },
-                                },
-                                required: ["command"],
+                                    required: ["command"],
+                                },    
                             },
                         }
                     ],
-=end
                     metadata: { my_internal_version_id: '1.0.0' },
                 }
             )
@@ -231,7 +231,7 @@ binding.pry
                 prompt = gets.chomp
                 break if prompt == 'exit'
                 begin
-                    puts "Jarvis: #{chat1(prompt)}".blue
+                    puts "Jarvis: #{chat2(prompt)}".blue
                 rescue => e
                     puts "Jarvis: #{e.message}".red
                 end
