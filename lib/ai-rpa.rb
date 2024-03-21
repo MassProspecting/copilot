@@ -51,7 +51,28 @@ module BlackStack
                     name: "OpenAI-Ruby test assistant", 
                     description: nil,
                     instructions: OPENAI_INSTRUCTIONS,
-                    metadata: { my_internal_version_id: '1.0.0' }
+=begin
+                    tools: [
+                        {"type": "code_interpreter"}, 
+                        {"type": "retrieval"}, 
+                        {
+                            type: "function",
+                            name: "run_command_in_local_computer",
+                            description: "Run a bash command in the local computer",
+                            parameters: {
+                                type: :object,
+                                properties: {
+                                    command: {
+                                        type: :string,
+                                        description: "A bash command.",
+                                    },
+                                },
+                                required: ["command"],
+                            },
+                        }
+                    ],
+=end
+                    metadata: { my_internal_version_id: '1.0.0' },
                 }
             )
             @@openai_assistant_id = response["id"]
@@ -66,6 +87,15 @@ module BlackStack
 
             # dropbox
             @@dropbox_refresh_token = h[:dropbox_refresh_token] if h[:dropbox_refresh_token]
+        end
+
+        def get_current_weather(location:, unit: "celsius")
+            # Your function code goes here
+            if location =~ /San Francisco/i
+                return unit == "celsius" ? "The weather is nice 🌞 at 27°C" : "The weather is nice 🌞 at 80°F"
+            else
+                return unit == "celsius" ? "The weather is icy 🥶 at -5°C" : "The weather is icy 🥶 at 23°F"
+            end 
         end
 
         # for internal use only
@@ -93,10 +123,10 @@ module BlackStack
                             parameters: {
                                 type: :object,
                                 properties: {
-                                command: {
-                                    type: :string,
-                                    description: "A bash command.",
-                                },
+                                    command: {
+                                        type: :string,
+                                        description: "A bash command.",
+                                    },
                                 },
                                 required: ["command"],
                             },
@@ -123,7 +153,7 @@ module BlackStack
                 when "get_current_weather"
                     s = get_current_weather(**args)
                 end # case function_name
-                return self.chat("#{prompt}.\n\nDon't call any function. Here is the output of the regarding function that you already called: #{s}")
+                return self.chat1("#{prompt}.\n\nDon't call any function. Here is the output of the regarding function that you already called: #{s}")
             else
                 return message["content"]
             end # if message["role"] == "assistant" && message["function_call"]
@@ -137,7 +167,7 @@ module BlackStack
                 parameters: {
                     role: "user", # Required for manually created messages
                     content: prompt, # Required.
-                }
+                },
             )["id"]
             @@openai_message_ids << mid
 
@@ -145,7 +175,7 @@ module BlackStack
             response = @@openai_client.runs.create(
                 thread_id: @@openai_thread_id,
                 parameters: {
-                    assistant_id: @@openai_assistant_id
+                    assistant_id: @@openai_assistant_id,
                 }
             )
             run_id = response['id']
@@ -161,7 +191,26 @@ module BlackStack
                 when 'completed'
                     break # Exit loop and report result to user
                 when 'requires_action'
-                    # Handle tool calls (see below)
+binding.pry
+                    tools_to_call = response.dig('required_action', 'submit_tool_outputs', 'tool_calls')
+
+                    my_tool_outputs = tools_to_call.map { |tool|
+                        # Call the functions based on the tool's name
+                        function_name = tool.dig('function', 'name')
+                        arguments = JSON.parse(
+                              tool.dig("function", "arguments"),
+                              { symbolize_names: true },
+                        )
+                        
+                        tool_output = case function_name
+                        when "get_current_weather"
+                            get_current_weather(**arguments)
+                        end
+                
+                        { tool_call_id: tool['id'], output: tool_output }
+                    }
+                
+                    client.runs.submit_tool_outputs(thread_id: thread_id, run_id: run_id, parameters: { tool_outputs: my_tool_outputs })
                 when 'cancelled', 'failed', 'expired'
                     break # or `exit`
                 else
@@ -182,7 +231,7 @@ module BlackStack
                 prompt = gets.chomp
                 break if prompt == 'exit'
                 begin
-                    puts "Jarvis: #{chat2(prompt)}".blue
+                    puts "Jarvis: #{chat1(prompt)}".blue
                 rescue => e
                     puts "Jarvis: #{e.message}".red
                 end
