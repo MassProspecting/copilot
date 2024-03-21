@@ -155,23 +155,17 @@ module BlackStack
                 response = @@openai_client.runs.retrieve(id: run_id, thread_id: @@openai_thread_id)
                 status = response['status']
             
-                print 'Status:'
                 case status
                 when 'queued', 'in_progress', 'cancelling'
-                    puts 'Sleeping'
                     sleep 1 # Wait one second and poll again
                 when 'completed'
-                    puts 'Completed'
                     break # Exit loop and report result to user
                 when 'requires_action'
-                    puts 'Requires action'
                     # Handle tool calls (see below)
                 when 'cancelled', 'failed', 'expired'
-                    puts 'Canceled'
-                    puts response['last_error'].inspect
                     break # or `exit`
                 else
-                    puts "Unknown status response: #{status}"
+                    raise "Unknown run status response from OpenAI: #{status}"
                 end
             end
 
