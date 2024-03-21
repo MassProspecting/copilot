@@ -27,8 +27,7 @@ module BlackStack
         @@openai_client = nil
         @@openai_assistant_id = nil
         @@openai_thread_id = nil
-        @@openai_run_id = nil
-@@message = nil
+        @@openai_message_ids = []
 
         @@adspower_api_key = nil
         @@dropbox_refresh_token = nil
@@ -51,48 +50,22 @@ module BlackStack
                     model: @@openai_model,         # Retrieve via client.models.list. Assistants need 'gpt-3.5-turbo-1106' or later.
                     name: "OpenAI-Ruby test assistant", 
                     description: nil,
-                    instructions: "Your name is Jarvis.",
-=begin
-                    tools: [
-                        { type: 'retrieval' },           # Allow access to files attached using file_ids
-                        { type: 'code_interpreter' },    # Allow access to Python code interpreter 
-                    ],
-                    "file_ids": ["file-123"],            # See Files section above for how to upload files
-                    "metadata": { my_internal_version_id: '1.0.0' }
-=end
+                    instructions: OPENAI_INSTRUCTIONS,
+                    metadata: { my_internal_version_id: '1.0.0' }
                 }
             )
             @@openai_assistant_id = response["id"]
             
             # Create thread
-            response = @@openai_client.threads.create    # Note: Once you create a thread, there is no way to list it
-                                                # or recover it currently (as of 2023-12-10). So hold onto the `id` 
+            response = @@openai_client.threads.create   # Note: Once you create a thread, there is no way to list it
+                                                        # or recover it currently (as of 2023-12-10). So hold onto the `id` 
             @@openai_thread_id = response["id"]
-
-            response = @@openai_client.runs.create(
-                thread_id: @@openai_thread_id,
-                parameters: {
-                    assistant_id: @@openai_assistant_id
-                }
-            )
-            @@openai_run_id = response['id']
-binding.pry
-=begin
-            message_id = @@openai_client.messages.create(
-                thread_id: @@openai_thread_id,
-                parameters: {
-                    role: "user", # Required for manually created messages
-                    content: "What is your name?"
-                }
-            )["id"]
-@@message = @@openai_client.messages.retrieve(thread_id: @@openai_thread_id, id: message_id)
-=end
+            
             # adspower
             @@adspower_api_key = h[:adspower_api_key] if h[:adspower_api_key]
 
             # dropbox
             @@dropbox_refresh_token = h[:dropbox_refresh_token] if h[:dropbox_refresh_token]
-            
         end
 
         # for internal use only
@@ -102,16 +75,14 @@ binding.pry
         end        
 
         # for internal use only
-        def chat(prompt)
-            openai_client = OpenAI::Client.new(access_token: @@openai_api_key)
-            ret = openai_client.chat(
+        def chat1(prompt)
+            ret = @@openai_client.chat(
                 parameters: {
                     model: @@openai_model, # Required.
                     temperature: 0.5,
                     messages: [
                         { 
                             role: "user",
-                            #thread_id: @@openai_thread_id, # Required. 
                             content: prompt
                         },
                     ], # Required.
@@ -156,7 +127,58 @@ binding.pry
             else
                 return message["content"]
             end # if message["role"] == "assistant" && message["function_call"]
-        end
+        end # def chat1
+
+        # for internal use only
+        def chat2(prompt)
+            # create the new message
+            mid = @@openai_client.messages.create(
+                thread_id: @@openai_thread_id,
+                parameters: {
+                    role: "user", # Required for manually created messages
+                    content: prompt, # Required.
+                }
+            )["id"]
+            @@openai_message_ids << mid
+
+            # run the assistant
+            response = @@openai_client.runs.create(
+                thread_id: @@openai_thread_id,
+                parameters: {
+                    assistant_id: @@openai_assistant_id
+                }
+            )
+            run_id = response['id']
+            
+            # wait for a response
+            while true do    
+                response = @@openai_client.runs.retrieve(id: run_id, thread_id: @@openai_thread_id)
+                status = response['status']
+            
+                print 'Status:'
+                case status
+                when 'queued', 'in_progress', 'cancelling'
+                    puts 'Sleeping'
+                    sleep 1 # Wait one second and poll again
+                when 'completed'
+                    puts 'Completed'
+                    break # Exit loop and report result to user
+                when 'requires_action'
+                    puts 'Requires action'
+                    # Handle tool calls (see below)
+                when 'cancelled', 'failed', 'expired'
+                    puts 'Canceled'
+                    puts response['last_error'].inspect
+                    break # or `exit`
+                else
+                    puts "Unknown status response: #{status}"
+                end
+            end
+
+            # 
+            messages = @@openai_client.messages.list(thread_id: @@openai_thread_id) 
+            messages['data'].first['content'].first['text']['value']
+        end # def chat2
 
         def console
             puts "Jarvis Console".blue
@@ -166,7 +188,7 @@ binding.pry
                 prompt = gets.chomp
                 break if prompt == 'exit'
                 begin
-                    puts "Jarvis: #{chat(prompt)}".blue
+                    puts "Jarvis: #{chat2(prompt)}".blue
                 rescue => e
                     puts "Jarvis: #{e.message}".red
                 end
