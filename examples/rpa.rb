@@ -6,4 +6,8 @@ client = BlackStack::Jarvis.new(
     openai_model: OPENAI_MODEL,
 )
 
-p client.chat("Please tell me what folders are in the home directory in the local computer.")
+client.console
+
+#p client.chat("Please tell me what folders are in the home directory in the local computer.")
+#p client.chat('What is the weather like in San Francisco?')
+#p client.chat('Hello Jarvis.')
