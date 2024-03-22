@@ -1,4 +1,4 @@
-require 'lib/ai-rpa'
+require 'lib/my-jarvis'
 require 'config'
 
 client = BlackStack::Jarvis.new(

@@ -77,10 +77,7 @@ module BlackStack
                             type: "function",
                             function: {
                                 name: "nodes",
-                                description: "Return the list of nodes, with their SSH credentials",
-                                parameters: {
-                                    type: :object,
-                                },    
+                                description: "Return the list of nodes, with their SSH credentials.",
                             },
                         }, {
                             type: "function",
@@ -111,7 +108,7 @@ module BlackStack
                                             description: "the password to connect via SSH.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ['label', 'net_remote_ip', 'ssh_port', 'ssh_username', 'ssh_password'],
                                 },    
                             },
                         }, {
@@ -143,7 +140,7 @@ module BlackStack
                                             description: "the full path to the file in this local computer where to find the private key to connect via SSH.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ["label", "net_remote_ip", "ssh_port", "ssh_username", "ssh_private_key_filename"],
                                 },    
                             },
                         }, {
@@ -159,7 +156,7 @@ module BlackStack
                                             description: "a string to identify the node. It must be unique.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ["label"],
                                 },    
                             },
                         }, {
@@ -175,7 +172,7 @@ module BlackStack
                                             description: "a string to identify the node. It must be unique.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ["label"],
                                 },    
                             },
                         }, {
@@ -191,7 +188,7 @@ module BlackStack
                                             description: "a string to identify the node. It must be unique.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ["label"],
                                 },    
                             },
                         }, {
@@ -207,7 +204,7 @@ module BlackStack
                                             description: "a string to identify the node. It must be unique.",
                                         },
                                     },
-                                    required: ["command"],
+                                    required: ["label"],
                                 },    
                             },
                         }
@@ -401,6 +398,22 @@ module BlackStack
                         tool_output = case function_name
                         when "run_command_in_local_computer"
                             run_command_in_local_computer(**arguments)
+                        when "nodes"
+                            nodes
+                        when "add_node_with_password"
+                            add_node_with_password(**arguments)
+                        when "add_node_with_private_key"
+                            add_node_with_private_key(**arguments)
+                        when "connect_node"
+                            connect_node(**arguments)
+                        when "disconnect_node"
+                            disconnect_node(**arguments)
+                        when "run_command_in_node"
+                            run_command_in_node(**arguments)
+                        when "reboot_node"
+                            reboot_node(**arguments)
+                        else
+                            raise "Unknown function name: #{function_name}"
                         end
                 
                         { tool_call_id: tool['id'], output: tool_output }
