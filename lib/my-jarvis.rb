@@ -187,6 +187,10 @@ module BlackStack
                                             type: :string,
                                             description: "a string to identify the node. It must be unique.",
                                         },
+                                        command: {
+                                            type: :string,
+                                            description: "the bash command to run in the node via SSH.",
+                                        },
                                     },
                                     required: ["label"],
                                 },    
@@ -260,9 +264,15 @@ module BlackStack
         # ssh_port: the port to connect via SSH. It is usually 22.
         # ssh_username: the username to connect via SSH.
         # ssh_private_key: the full path to the file in this local computer where to find the private key to connect via SSH.
-        def add_node_with_private_key(label, net_remote_ip, ssh_port, ssh_username, ssh_private_key_filename)
+        def add_node_with_private_key(h)
+            label = h[:label]
+            net_remote_ip = h[:net_remote_ip]
+            ssh_port = h[:ssh_port]
+            ssh_username = h[:ssh_username]
+            ssh_private_key_filename = h[:ssh_private_key_filename]
             raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
             node = BlackStack::Infrastructure::Node.new(
+                :name => label,
                 :net_remote_ip => net_remote_ip,
                 :ssh_port => ssh_port,
                 :ssh_username => ssh_username,
@@ -299,62 +309,8 @@ module BlackStack
             node.reboot
         end
 
-=begin
         # for internal use only
-        def chat1(prompt)
-            ret = @@openai_client.chat(
-                parameters: {
-                    model: @@openai_model, # Required.
-                    temperature: 0.5,
-                    messages: [
-                        { 
-                            role: "user",
-                            content: prompt
-                        },
-                    ], # Required.
-                    functions: [
-                        {
-                            name: "run_command_in_local_computer",
-                            description: "Run a bash command in the local computer",
-                            parameters: {
-                                type: :object,
-                                properties: {
-                                    command: {
-                                        type: :string,
-                                        description: "A bash command.",
-                                    },
-                                },
-                                required: ["command"],
-                            },
-                        },
-                    ],
-                }
-            )
-            raise "OpenAI Error (code:#{ret['error']['code']}) - #{ret['error']['message']}" if ret['error']
-            raise "OpenAI Unkown Error: #{ret.to_s}" if ret['choices'].nil? || ret['choices'].size == 0
-
-            message = ret['choices'][0]['message']
-            
-            if message["role"] == "assistant" && message["function_call"]
-                function_name = message.dig("function_call", "name")
-                args =
-                  JSON.parse(
-                    message.dig("function_call", "arguments"),
-                    { symbolize_names: true },
-                  )
-              
-                case function_name
-                when "run_command_in_local_computer"
-                    s = run_command_in_local_computer(**args)
-                end # case function_name
-                return self.chat1("#{prompt}.\n\nDon't call any function. Here is the output of the regarding function that you already called: #{s}")
-            else
-                return message["content"]
-            end # if message["role"] == "assistant" && message["function_call"]
-        end # def chat1
-=end
-        # for internal use only
-        def chat2(prompt)
+        def chat(prompt)
             # create the new message
             mid = @@openai_client.messages.create(
                 thread_id: @@openai_thread_id,
@@ -403,6 +359,8 @@ module BlackStack
                         when "add_node_with_password"
                             add_node_with_password(**arguments)
                         when "add_node_with_private_key"
+#binding.pry
+# Agrega este nodo a tu lista porvaor: mp01. ip: 3.15.213.149. puerto: 22, usuario: ubuntu, la clave ssh esta en el archivo ~/code/massprospecting/cli/mp.pem en la computadora local.
                             add_node_with_private_key(**arguments)
                         when "connect_node"
                             connect_node(**arguments)
@@ -418,7 +376,7 @@ module BlackStack
                 
                         { tool_call_id: tool['id'], output: tool_output }
                     }
-                
+binding.pry
                     @@openai_client.runs.submit_tool_outputs(thread_id: @@openai_thread_id, run_id: run_id, parameters: { tool_outputs: my_tool_outputs })
                 when 'cancelled', 'failed', 'expired'
                     break # or `exit`
@@ -430,7 +388,7 @@ module BlackStack
             # 
             messages = @@openai_client.messages.list(thread_id: @@openai_thread_id) 
             messages['data'].first['content'].first['text']['value']
-        end # def chat2
+        end # def chat
 
         def console
             puts "Jarvis Console".blue
@@ -440,9 +398,10 @@ module BlackStack
                 prompt = gets.chomp
                 break if prompt == 'exit'
                 begin
-                    puts "Jarvis: #{chat2(prompt)}".blue
+                    puts "Jarvis: #{chat(prompt)}".blue
                 rescue => e
-                    puts "Jarvis: #{e.message}".red
+                    puts "Error: #{e.message}".red
+                    puts e.to_console
                 end
             end
         end # def console

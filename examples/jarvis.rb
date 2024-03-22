@@ -1,3 +1,5 @@
+#!~/.rvm/rubies/ruby-3.1.2/bin/ruby
+
 require 'lib/my-jarvis'
 require 'config'
 
