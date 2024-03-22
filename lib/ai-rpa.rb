@@ -32,6 +32,9 @@ module BlackStack
         @@adspower_api_key = nil
         @@dropbox_refresh_token = nil
     
+        # {'label' => 'foo', 'node' => <bBlackStack::Infrastructure::Node object here> }
+        @@nodes = []
+
         def initialize(h={})
             errors = []
 
@@ -70,6 +73,79 @@ module BlackStack
                                     required: ["command"],
                                 },    
                             },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "nodes",
+                                description: "Return the list of nodes, with their SSH credentials",
+                                parameters: {
+                                    type: :object,
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "add_node_with_password",
+                                description: "add a node to the list of nodes, with username and password access to establish a SSH connection",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
+                                        },
+                                        net_remote_ip: {
+                                            type: :string,
+                                            description: "the public IP of the node.",
+                                        },
+                                        ssh_port: {
+                                            type: :string,
+                                            description: "the port to connect via SSH. It is usually 22.",
+                                        },
+                                        ssh_username: {
+                                            type: :string,
+                                            description: "the username to connect via SSH.",
+                                        },
+                                        ssh_password: {
+                                            type: :string,
+                                            description: "the password to connect via SSH.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "add_node_with_private_key",
+                                description: "add a node to the list of nodes, with username and private key access to establish a SSH connection",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
+                                        },
+                                        net_remote_ip: {
+                                            type: :string,
+                                            description: "the public IP of the node.",
+                                        },
+                                        ssh_port: {
+                                            type: :string,
+                                            description: "the port to connect via SSH. It is usually 22.",
+                                        },
+                                        ssh_username: {
+                                            type: :string,
+                                            description: "the username to connect via SSH.",
+                                        },
+                                        ssh_private_key_filename: {
+                                            type: :string,
+                                            description: "the full path to the file in this local computer where to find the private key to connect via SSH.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
                         }
                     ],
                     metadata: { my_internal_version_id: '1.0.0' },
@@ -89,21 +165,80 @@ module BlackStack
             @@dropbox_refresh_token = h[:dropbox_refresh_token] if h[:dropbox_refresh_token]
         end
 
-        def get_current_weather(location:, unit: "celsius")
-            # Your function code goes here
-            if location =~ /San Francisco/i
-                return unit == "celsius" ? "The weather is nice 🌞 at 27°C" : "The weather is nice 🌞 at 80°F"
-            else
-                return unit == "celsius" ? "The weather is icy 🥶 at -5°C" : "The weather is icy 🥶 at 23°F"
-            end 
-        end
-
         # for internal use only
         def run_command_in_local_computer(command:)
             ret = `#{command}`
             ret
-        end        
+        end  
+        
+        # return the list of nodes, with their SSH credentials
+        def nodes
+            @@nodes
+        end
 
+        # add a node to the list of nodes, with username and password access to establish a SSH connection
+        # label: a string to identify the node. It must be unique.
+        # net_remote_ip: the public IP of the node.
+        # ssh_port: the port to connect via SSH. It is usually 22.
+        # ssh_username: the username to connect via SSH.
+        # ssh_password: the password to connect via SSH.
+        def add_node_with_password(label, net_remote_ip, ssh_port, ssh_username, ssh_password)
+            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
+            node = BlackStack::Infrastructure::Node.new(
+                :net_remote_ip => net_remote_ip, 
+                :ssh_port => ssh_port, 
+                :ssh_username => ssh_username,
+                :ssh_password => ssh_password
+            )
+            @@nodes << { 'label' => label, 'node' => node }
+        end
+
+        # add a node to the list of nodes, with username and private key access to establish a SSH connection
+        # label: a string to identify the node. It must be unique.
+        # net_remote_ip: the public IP of the node.
+        # ssh_port: the port to connect via SSH. It is usually 22.
+        # ssh_username: the username to connect via SSH.
+        # ssh_private_key: the full path to the file in this local computer where to find the private key to connect via SSH.
+        def add_node_with_private_key(label, net_remote_ip, ssh_port, ssh_username, ssh_private_key_filename)
+            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
+            node = BlackStack::Infrastructure::Node.new(
+                :net_remote_ip => net_remote_ip,
+                :ssh_port => ssh_port,
+                :ssh_username => ssh_username,
+                :ssh_private_key_file => ssh_private_key_filename,
+            )
+            @@nodes << { 'label' => label, 'node' => node }
+        end
+
+        # connect to a node via ssh.
+        def connect_node(label)
+            node = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if node.nil?
+            node['node'].connect
+        end
+
+        # disconnect from a node via ssh.
+        def disconnect_node(label)
+            node = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if node.nil?
+            node['node'].disconnect
+        end
+
+        # run a command in a node via ssh.
+        def run_command_in_node(label, command)
+            node = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if node.nil?
+            node.exec(command)
+        end
+
+        # reboot a node via ssh.
+        def reboot_node(label)
+            node = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if node.nil?
+            node.reboot
+        end
+
+=begin
         # for internal use only
         def chat1(prompt)
             ret = @@openai_client.chat(
@@ -150,15 +285,13 @@ module BlackStack
                 case function_name
                 when "run_command_in_local_computer"
                     s = run_command_in_local_computer(**args)
-                when "get_current_weather"
-                    s = get_current_weather(**args)
                 end # case function_name
                 return self.chat1("#{prompt}.\n\nDon't call any function. Here is the output of the regarding function that you already called: #{s}")
             else
                 return message["content"]
             end # if message["role"] == "assistant" && message["function_call"]
         end # def chat1
-
+=end
         # for internal use only
         def chat2(prompt)
             # create the new message
@@ -191,7 +324,6 @@ module BlackStack
                 when 'completed'
                     break # Exit loop and report result to user
                 when 'requires_action'
-binding.pry
                     tools_to_call = response.dig('required_action', 'submit_tool_outputs', 'tool_calls')
 
                     my_tool_outputs = tools_to_call.map { |tool|
@@ -203,14 +335,14 @@ binding.pry
                         )
                         
                         tool_output = case function_name
-                        when "get_current_weather"
-                            get_current_weather(**arguments)
+                        when "run_command_in_local_computer"
+                            run_command_in_local_computer(**arguments)
                         end
                 
                         { tool_call_id: tool['id'], output: tool_output }
                     }
                 
-                    client.runs.submit_tool_outputs(thread_id: thread_id, run_id: run_id, parameters: { tool_outputs: my_tool_outputs })
+                    @@openai_client.runs.submit_tool_outputs(thread_id: @@openai_thread_id, run_id: run_id, parameters: { tool_outputs: my_tool_outputs })
                 when 'cancelled', 'failed', 'expired'
                     break # or `exit`
                 else
