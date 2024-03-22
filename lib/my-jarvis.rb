@@ -137,6 +137,7 @@ module BlackStack
         ## 
         module Browsing
             @@adspower_api_key = nil
+            @@drivers = []
 
             def self.initialize(h)
                 @@adspower_api_key = h[:adspower_api_key] if h[:adspower_api_key]
@@ -150,7 +151,7 @@ module BlackStack
                 code = h[:code]
                 client = AdsPowerClient.new(api_key: @@adspower_api_key)
                 client.start(code) unless client.check(code)
-                @@drivers << { 'code' => code, 'driver' => client.driver(id) }
+                @@drivers << { 'code' => code, 'driver' => client.driver(code) }
             end
 
             # stop the browser
@@ -400,10 +401,46 @@ module BlackStack
                                     properties: {
                                         code: {
                                             type: :string,
-                                            description: "Code of the browser to start.",
+                                            description: "Code of the browser to stop.",
                                         },
                                     },
                                     required: ["code"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "is_running",
+                                description: "Return true if the browser is running.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to check.",
+                                        },
+                                    },
+                                    required: ["code"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "visit",
+                                description: "Visit an URL in a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to operate.",
+                                        },
+                                        url: {
+                                            type: :string,
+                                            description: "URL to visit.",
+                                        },
+                                    },
+                                    required: ["code", "url"],
                                 },    
                             },
                         }
@@ -497,6 +534,10 @@ module BlackStack
                                 BlackStack::Jarvis::Browsing.start(**arguments)
                             when "browser_stop"
                                 BlackStack::Jarvis::Browsing.stop(**arguments)
+                            when "is_running"
+                                BlackStack::Jarvis::Browsing.is_running?(**arguments)
+                            when "visit"
+                                BlackStack::Jarvis::Browsing.visit(**arguments)
                             else
                                 raise "Unknown function name: #{function_name}"
                             end
