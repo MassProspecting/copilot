@@ -61,7 +61,7 @@ module BlackStack
                             type: "function",
                             function: {
                                 name: "run_command_in_local_computer",
-                                description: "Run a bash command in the local computer",
+                                description: "Run a bash command in the local computer.",
                                 parameters: {
                                     type: :object,
                                     properties: {
@@ -86,7 +86,7 @@ module BlackStack
                             type: "function",
                             function: {
                                 name: "add_node_with_password",
-                                description: "add a node to the list of nodes, with username and password access to establish a SSH connection",
+                                description: "add a node to the list of nodes, with username and password access to establish a SSH connection.",
                                 parameters: {
                                     type: :object,
                                     properties: {
@@ -118,7 +118,7 @@ module BlackStack
                             type: "function",
                             function: {
                                 name: "add_node_with_private_key",
-                                description: "add a node to the list of nodes, with username and private key access to establish a SSH connection",
+                                description: "add a node to the list of nodes, with username and private key access to establish a SSH connection.",
                                 parameters: {
                                     type: :object,
                                     properties: {
@@ -141,6 +141,70 @@ module BlackStack
                                         ssh_private_key_filename: {
                                             type: :string,
                                             description: "the full path to the file in this local computer where to find the private key to connect via SSH.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "connect_node",
+                                description: "connect to a node via ssh.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "disconnect_node",
+                                description: "disconnect ssh communication to a node.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "run_command_in_node",
+                                description: "run a command in a node via ssh.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
+                                        },
+                                    },
+                                    required: ["command"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "reboot_node",
+                                description: "reboot a node via ssh.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        label: {
+                                            type: :string,
+                                            description: "a string to identify the node. It must be unique.",
                                         },
                                     },
                                     required: ["command"],
@@ -191,7 +255,7 @@ module BlackStack
                 :ssh_password => ssh_password
             )
             @@nodes << { 'label' => label, 'node' => node }
-        end
+        end # def add_node_with_password
 
         # add a node to the list of nodes, with username and private key access to establish a SSH connection
         # label: a string to identify the node. It must be unique.
