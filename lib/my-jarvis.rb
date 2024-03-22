@@ -31,9 +31,9 @@ module BlackStack
 
         @@dropbox_refresh_token = nil
     
-        # {'label' => 'foo', 'node' => <bBlackStack::Infrastructure::Node object here> }
+        # {'label' => 'foo', 'node' => <BlackStack::Infrastructure::Node object here> }
         @@nodes = []
-
+        
         ## Local Computer Operation
         ##
         ##
@@ -149,7 +149,8 @@ module BlackStack
             def self.start(h)
                 code = h[:code]
                 client = AdsPowerClient.new(api_key: @@adspower_api_key)
-                client.start(code)
+                client.start(code) unless client.check(code)
+                @@drivers << { 'code' => code, 'driver' => client.driver(id) }
             end
 
             # stop the browser
@@ -159,10 +160,12 @@ module BlackStack
             def self.stop(h)
                 code = h[:code]
                 client = AdsPowerClient.new(api_key: @@adspower_api_key)
-                client.stop(code)
+                client.stop(code) if client.check(code)
+                # remove eny driver with code
+                @@drivers.delete_if { |d| d['code'] == code }
             end
 
-            # stop the browser
+            # return true of the browser is running
             #
             # code: the unique ID of the browser.
             #
@@ -174,12 +177,16 @@ module BlackStack
 
             # visit an URL
             #
+            # code: the unique ID of the browser.
             # url: the URL to visit.
             #
             def self.visit(h)
+                code = h[:code]
                 url = h[:url]
                 client = AdsPowerClient.new(api_key: @@adspower_api_key)
-                client.visit(url)
+                d = @@drivers.find { |d| d['code'] == code }
+                raise "Browser not found." if d.nil?
+                d['driver'].get(url)
             end
 
         end # module Browsing 
