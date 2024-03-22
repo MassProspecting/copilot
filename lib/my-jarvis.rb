@@ -29,11 +29,144 @@ module BlackStack
         @@openai_thread_id = nil
         @@openai_message_ids = []
 
-        @@adspower_api_key = nil
         @@dropbox_refresh_token = nil
     
         # {'label' => 'foo', 'node' => <bBlackStack::Infrastructure::Node object here> }
         @@nodes = []
+
+        ## Local Computer Operation
+        ##
+        ##
+
+        # for internal use only
+        def run_command_in_local_computer(command:)
+            ret = `#{command}`
+            ret
+        end  
+
+        ## Remote Computers Operation
+        ##
+        ##
+
+        # return the list of nodes, with their SSH credentials
+        def nodes
+            @@nodes
+        end
+
+        # add a node to the list of nodes, with username and password access to establish a SSH connection
+        # label: a string to identify the node. It must be unique.
+        # net_remote_ip: the public IP of the node.
+        # ssh_port: the port to connect via SSH. It is usually 22.
+        # ssh_username: the username to connect via SSH.
+        # ssh_password: the password to connect via SSH.
+        def add_node_with_password(h)
+            label = h[:label]
+            net_remote_ip = h[:net_remote_ip]
+            ssh_port = h[:ssh_port]
+            ssh_username = h[:ssh_username]
+            ssh_password = h[:ssh_password]
+            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
+            node = BlackStack::Infrastructure::Node.new(
+                :name => label,
+                :net_remote_ip => net_remote_ip, 
+                :ssh_port => ssh_port, 
+                :ssh_username => ssh_username,
+                :ssh_password => ssh_password
+            )
+            @@nodes << { 'label' => label, 'node' => node }
+        end # def add_node_with_password
+
+        # add a node to the list of nodes, with username and private key access to establish a SSH connection
+        # label: a string to identify the node. It must be unique.
+        # net_remote_ip: the public IP of the node.
+        # ssh_port: the port to connect via SSH. It is usually 22.
+        # ssh_username: the username to connect via SSH.
+        # ssh_private_key: the full path to the file in this local computer where to find the private key to connect via SSH.
+        def add_node_with_private_key(h)
+            label = h[:label]
+            net_remote_ip = h[:net_remote_ip]
+            ssh_port = h[:ssh_port]
+            ssh_username = h[:ssh_username]
+            ssh_private_key_filename = h[:ssh_private_key_filename]
+            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
+            node = BlackStack::Infrastructure::Node.new(
+                :name => label,
+                :net_remote_ip => net_remote_ip,
+                :ssh_port => ssh_port,
+                :ssh_username => ssh_username,
+                :ssh_private_key_file => ssh_private_key_filename,
+            )
+            @@nodes << { 'label' => label, 'node' => node }
+        end
+
+        # connect to a node via ssh.
+        def connect_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?    
+            n['node'].connect
+        end
+
+        # disconnect from a node via ssh.
+        def disconnect_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].disconnect
+        end
+
+        # run a command in a node via ssh.
+        def run_command_in_node(h)
+            label = h[:label]
+            command = h[:command]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].exec(command)
+        end
+
+        # reboot a node via ssh.
+        def reboot_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].reboot
+        end
+
+        ## Browsers Operation
+        ## 
+        ## 
+        module Browsing
+            @@adspower_api_key = nil
+
+            def self.initialize(h)
+                @@adspower_api_key = h[:adspower_api_key] if h[:adspower_api_key]
+            end
+
+            # start the browser
+            #
+            # code: the unique ID of the browser.
+            #
+            def self.start(h)
+                code = h[:code]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                client.start(code)
+            end
+
+            # stop the browser
+            #
+            # code: the unique ID of the browser.
+            #
+            def self.stop(h)
+                code = h[:code]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                client.stop(code)
+            end
+
+        end # module Browsing 
+
+        ## Constructor
+        ## 
+        ## 
 
         def initialize(h={})
             errors = []
@@ -57,6 +190,7 @@ module BlackStack
                     tools: [
                         {"type": "code_interpreter"}, 
                         {"type": "retrieval"}, 
+                        ## Local Computer Operation
                         {
                             type: "function",
                             function: {
@@ -73,6 +207,7 @@ module BlackStack
                                     required: ["command"],
                                 },    
                             },
+                        ## Remote Computers Operation
                         }, {
                             type: "function",
                             function: {
@@ -211,6 +346,39 @@ module BlackStack
                                     required: ["label"],
                                 },    
                             },
+                        ## Browsers Operation
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "browser_start",
+                                description: "Start a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to start.",
+                                        },
+                                    },
+                                    required: ["code"],
+                                },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "browser_stop",
+                                description: "Stop a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to start.",
+                                        },
+                                    },
+                                    required: ["code"],
+                                },    
+                            },
                         }
                     ],
                     metadata: { my_internal_version_id: '1.0.0' },
@@ -224,102 +392,16 @@ module BlackStack
             @@openai_thread_id = response["id"]
             
             # adspower
-            @@adspower_api_key = h[:adspower_api_key] if h[:adspower_api_key]
+            BlackStack::Jarvis::Browsing.initialize(h)
 
             # dropbox
             @@dropbox_refresh_token = h[:dropbox_refresh_token] if h[:dropbox_refresh_token]
         end
 
-        # for internal use only
-        def run_command_in_local_computer(command:)
-            ret = `#{command}`
-            ret
-        end  
-        
-        # return the list of nodes, with their SSH credentials
-        def nodes
-            @@nodes
-        end
 
-        # add a node to the list of nodes, with username and password access to establish a SSH connection
-        # label: a string to identify the node. It must be unique.
-        # net_remote_ip: the public IP of the node.
-        # ssh_port: the port to connect via SSH. It is usually 22.
-        # ssh_username: the username to connect via SSH.
-        # ssh_password: the password to connect via SSH.
-        def add_node_with_password(h)
-            label = h[:label]
-            net_remote_ip = h[:net_remote_ip]
-            ssh_port = h[:ssh_port]
-            ssh_username = h[:ssh_username]
-            ssh_password = h[:ssh_password]
-            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
-            node = BlackStack::Infrastructure::Node.new(
-                :name => label,
-                :net_remote_ip => net_remote_ip, 
-                :ssh_port => ssh_port, 
-                :ssh_username => ssh_username,
-                :ssh_password => ssh_password
-            )
-            @@nodes << { 'label' => label, 'node' => node }
-        end # def add_node_with_password
-
-        # add a node to the list of nodes, with username and private key access to establish a SSH connection
-        # label: a string to identify the node. It must be unique.
-        # net_remote_ip: the public IP of the node.
-        # ssh_port: the port to connect via SSH. It is usually 22.
-        # ssh_username: the username to connect via SSH.
-        # ssh_private_key: the full path to the file in this local computer where to find the private key to connect via SSH.
-        def add_node_with_private_key(h)
-            label = h[:label]
-            net_remote_ip = h[:net_remote_ip]
-            ssh_port = h[:ssh_port]
-            ssh_username = h[:ssh_username]
-            ssh_private_key_filename = h[:ssh_private_key_filename]
-            raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
-            node = BlackStack::Infrastructure::Node.new(
-                :name => label,
-                :net_remote_ip => net_remote_ip,
-                :ssh_port => ssh_port,
-                :ssh_username => ssh_username,
-                :ssh_private_key_file => ssh_private_key_filename,
-            )
-            @@nodes << { 'label' => label, 'node' => node }
-        end
-
-        # connect to a node via ssh.
-        def connect_node(h)
-            label = h[:label]
-            n = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if n.nil?    
-            n['node'].connect
-        end
-
-        # disconnect from a node via ssh.
-        def disconnect_node(h)
-            label = h[:label]
-            n = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if n.nil?
-            n['node'].disconnect
-        end
-
-        # run a command in a node via ssh.
-        def run_command_in_node(h)
-            label = h[:label]
-            command = h[:command]
-#binding.pry
-            n = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if n.nil?
-            n['node'].exec(command)
-        end
-
-        # reboot a node via ssh.
-        def reboot_node(h)
-            label = h[:label]
-            n = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if n.nil?
-            n['node'].reboot
-        end
+        ## AI Methods
+        ##
+        ##
 
         # for internal use only
         def chat(prompt)
@@ -365,8 +447,10 @@ module BlackStack
                         
                         begin
                             tool_output = case function_name
+                            ## Local Computer Operation
                             when "run_command_in_local_computer"
                                 run_command_in_local_computer(**arguments)
+                            ## Remote Computers Operation
                             when "nodes"
                                 nodes
                             when "add_node_with_password"
@@ -381,12 +465,18 @@ module BlackStack
                                 run_command_in_node(**arguments)
                             when "reboot_node"
                                 reboot_node(**arguments)
+                            ## Browsers Operation
+                            when "browser_start"
+                                BlackStack::Jarvis::Browsing.start(**arguments)
+                            when "browser_stop"
+                                BlackStack::Jarvis::Browsing.stop(**arguments)
                             else
                                 raise "Unknown function name: #{function_name}"
                             end
                     
                             { tool_call_id: tool['id'], output: tool_output.to_s }
                         rescue => e
+puts e.to_console.red
                             { tool_call_id: tool['id'], output: "Error: #{e.message}" }
                         end
                     }
