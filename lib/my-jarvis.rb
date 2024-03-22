@@ -162,6 +162,26 @@ module BlackStack
                 client.stop(code)
             end
 
+            # stop the browser
+            #
+            # code: the unique ID of the browser.
+            #
+            def self.is_running?(h)
+                code = h[:code]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                client.check(code)
+            end
+
+            # visit an URL
+            #
+            # url: the URL to visit.
+            #
+            def self.visit(h)
+                url = h[:url]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                client.visit(url)
+            end
+
         end # module Browsing 
 
         ## Constructor
