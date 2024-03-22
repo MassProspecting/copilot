@@ -247,9 +247,15 @@ module BlackStack
         # ssh_port: the port to connect via SSH. It is usually 22.
         # ssh_username: the username to connect via SSH.
         # ssh_password: the password to connect via SSH.
-        def add_node_with_password(label, net_remote_ip, ssh_port, ssh_username, ssh_password)
+        def add_node_with_password(h)
+            label = h[:label]
+            net_remote_ip = h[:net_remote_ip]
+            ssh_port = h[:ssh_port]
+            ssh_username = h[:ssh_username]
+            ssh_password = h[:ssh_password]
             raise 'Already exists a node with this label.' if @@nodes.find { |n| n['label'] == label }
             node = BlackStack::Infrastructure::Node.new(
+                :name => label,
                 :net_remote_ip => net_remote_ip, 
                 :ssh_port => ssh_port, 
                 :ssh_username => ssh_username,
@@ -282,31 +288,37 @@ module BlackStack
         end
 
         # connect to a node via ssh.
-        def connect_node(label)
-            node = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if node.nil?
-            node['node'].connect
+        def connect_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?    
+            n['node'].connect
         end
 
         # disconnect from a node via ssh.
-        def disconnect_node(label)
-            node = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if node.nil?
-            node['node'].disconnect
+        def disconnect_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].disconnect
         end
 
         # run a command in a node via ssh.
-        def run_command_in_node(label, command)
-            node = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if node.nil?
-            node.exec(command)
+        def run_command_in_node(h)
+            label = h[:label]
+            command = h[:command]
+#binding.pry
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].exec(command)
         end
 
         # reboot a node via ssh.
-        def reboot_node(label)
-            node = @@nodes.find { |n| n['label'] == label }
-            raise "Node not found." if node.nil?
-            node.reboot
+        def reboot_node(h)
+            label = h[:label]
+            n = @@nodes.find { |n| n['label'] == label }
+            raise "Node not found." if n.nil?
+            n['node'].reboot
         end
 
         # for internal use only
@@ -351,33 +363,39 @@ module BlackStack
                               { symbolize_names: true },
                         )
                         
-                        tool_output = case function_name
-                        when "run_command_in_local_computer"
-                            run_command_in_local_computer(**arguments)
-                        when "nodes"
-                            nodes
-                        when "add_node_with_password"
-                            add_node_with_password(**arguments)
-                        when "add_node_with_private_key"
-#binding.pry
-# Agrega este nodo a tu lista porvaor: mp01. ip: 3.15.213.149. puerto: 22, usuario: ubuntu, la clave ssh esta en el archivo ~/code/massprospecting/cli/mp.pem en la computadora local.
-                            add_node_with_private_key(**arguments)
-                        when "connect_node"
-                            connect_node(**arguments)
-                        when "disconnect_node"
-                            disconnect_node(**arguments)
-                        when "run_command_in_node"
-                            run_command_in_node(**arguments)
-                        when "reboot_node"
-                            reboot_node(**arguments)
-                        else
-                            raise "Unknown function name: #{function_name}"
+                        begin
+                            tool_output = case function_name
+                            when "run_command_in_local_computer"
+                                run_command_in_local_computer(**arguments)
+                            when "nodes"
+                                nodes
+                            when "add_node_with_password"
+                                add_node_with_password(**arguments)
+                            when "add_node_with_private_key"
+                                add_node_with_private_key(**arguments)
+                            when "connect_node"
+                                connect_node(**arguments)
+                            when "disconnect_node"
+                                disconnect_node(**arguments)
+                            when "run_command_in_node"
+                                run_command_in_node(**arguments)
+                            when "reboot_node"
+                                reboot_node(**arguments)
+                            else
+                                raise "Unknown function name: #{function_name}"
+                            end
+                    
+                            { tool_call_id: tool['id'], output: tool_output.to_s }
+                        rescue => e
+                            { tool_call_id: tool['id'], output: "Error: #{e.message}" }
                         end
-                
-                        { tool_call_id: tool['id'], output: tool_output }
                     }
-binding.pry
-                    @@openai_client.runs.submit_tool_outputs(thread_id: @@openai_thread_id, run_id: run_id, parameters: { tool_outputs: my_tool_outputs })
+                    
+                    @@openai_client.runs.submit_tool_outputs(
+                        thread_id: @@openai_thread_id, 
+                        run_id: run_id, 
+                        parameters: { tool_outputs: my_tool_outputs }
+                    )
                 when 'cancelled', 'failed', 'expired'
                     break # or `exit`
                 else
