@@ -1,4 +1,3 @@
-
 =begin
 - Add a persona like Jarvis who reply with short sentences.
 - Prevent infinite loops in the chat method when calling functions.
@@ -225,7 +224,7 @@ module BlackStack
             #
             def self.take_screenshot(h)
                 code = h[:code]
-                filename = h[:filename]
+                filename = OPENAI_JARVIS_BROWSING_SCREENSHOT_FILENAME
                 client = AdsPowerClient.new(api_key: @@adspower_api_key)
                 d = @@drivers.find { |d| d['code'] == code }
                 raise "Browser not found." if d.nil?
@@ -555,12 +554,8 @@ module BlackStack
                                             type: :string,
                                             description: "Code of the browser to operate.",
                                         },
-                                        filename: {
-                                            type: :string,
-                                            description: "Full path to the file where to save the screenshot.",
-                                        },
                                     },
-                                    required: ["code", "filename"],
+                                    required: ["code"],
                                 },
                             },
                         }, {
@@ -700,13 +695,13 @@ puts e.to_console.red
                             { tool_call_id: tool['id'], output: "Error: #{e.message}" }
                         end
                     }
-                    
                     @@openai_client.runs.submit_tool_outputs(
                         thread_id: @@openai_thread_id, 
                         run_id: run_id, 
                         parameters: { tool_outputs: my_tool_outputs }
                     )
                 when 'cancelled', 'failed', 'expired'
+                    raise response['last_error']['message']
                     break # or `exit`
                 else
                     raise "Unknown run status response from OpenAI: #{status}"
