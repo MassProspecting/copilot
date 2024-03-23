@@ -682,6 +682,14 @@ module BlackStack
                                 BlackStack::Jarvis::Browsing.is_running?(**arguments)
                             when "visit"
                                 BlackStack::Jarvis::Browsing.visit(**arguments)
+                            when "scroll_horizontally"
+                                BlackStack::Jarvis::Browsing.scroll_horizontally(**arguments)
+                            when "scroll_vertically"
+                                BlackStack::Jarvis::Browsing.scroll_vertically(**arguments)
+                            when "take_screenshot"
+                                BlackStack::Jarvis::Browsing.take_screenshot(**arguments)
+                            when "click"
+                                BlackStack::Jarvis::Browsing.click(**arguments)
                             else
                                 raise "Unknown function name: #{function_name}"
                             end
