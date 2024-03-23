@@ -190,6 +190,66 @@ module BlackStack
                 d['driver'].get(url)
             end
 
+            # scroll horizontally
+            #
+            # code: the unique ID of the browser.
+            # pixels: the number of pixels to scroll. It may be negative or positive, to scroll left or right.
+            #
+            def self.scroll_horizontally(h)
+                code = h[:code]
+                pixels = h[:pixels]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                d = @@drivers.find { |d| d['code'] == code }
+                raise "Browser not found." if d.nil?
+                d['driver'].execute_script("window.scrollBy(#{pixels},0)")
+            end
+
+            # scroll vertically
+            #
+            # code: the unique ID of the browser.
+            # pixels: the number of pixels to scroll. It may be negative or positive, to scroll up or down.
+            #
+            def self.scroll_vertically(h)
+                code = h[:code]
+                pixels = h[:pixels]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                d = @@drivers.find { |d| d['code'] == code }
+                raise "Browser not found." if d.nil?
+                d['driver'].execute_script("window.scrollBy(0,#{pixels})")
+            end
+
+            # take a screenshot
+            #
+            # code: the unique ID of the browser.
+            # filename: the full path to the file where to save the screenshot.
+            #
+            def self.take_screenshot(h)
+                code = h[:code]
+                filename = h[:filename]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                d = @@drivers.find { |d| d['code'] == code }
+                raise "Browser not found." if d.nil?
+                d['driver'].save_screenshot(filename)
+            end
+
+            # click on a specific coordinates
+            #
+            # code: the unique ID of the browser.
+            # x: the x coordinate.
+            # y: the y coordinate.
+            #
+            def self.click(h)
+                code = h[:code]
+                x = h[:x]
+                y = h[:y]
+                client = AdsPowerClient.new(api_key: @@adspower_api_key)
+                d = @@drivers.find { |d| d['code'] == code }
+                raise "Browser not found." if d.nil?
+                d['driver'].action.move_to(x: x, y: y).click.perform
+            end
+
+
+
         end # module Browsing 
 
         ## Constructor
@@ -442,6 +502,90 @@ module BlackStack
                                     },
                                     required: ["code", "url"],
                                 },    
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "scroll_horizontally",
+                                description: "Scroll horizontally in a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to operate.",
+                                        },
+                                        pixels: {
+                                            type: :integer,
+                                            description: "Number of pixels to scroll. It may be negative or positive, to scroll left or right.",
+                                        },
+                                    },
+                                    required: ["code", "pixels"],
+                                },
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "scroll_vertically",
+                                description: "Scroll vertically in a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to operate.",
+                                        },
+                                        pixels: {
+                                            type: :integer,
+                                            description: "Number of pixels to scroll. It may be negative or positive, to scroll up or down.",
+                                        },
+                                    },
+                                    required: ["code", "pixels"],
+                                },
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "take_screenshot",
+                                description: "Take a screenshot in a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to operate.",
+                                        },
+                                        filename: {
+                                            type: :string,
+                                            description: "Full path to the file where to save the screenshot.",
+                                        },
+                                    },
+                                    required: ["code", "filename"],
+                                },
+                            },
+                        }, {
+                            type: "function",
+                            function: {
+                                name: "click",
+                                description: "Click on a specific coordinates in a browser.",
+                                parameters: {
+                                    type: :object,
+                                    properties: {
+                                        code: {
+                                            type: :string,
+                                            description: "Code of the browser to operate.",
+                                        },
+                                        x: {
+                                            type: :integer,
+                                            description: "X coordinate.",
+                                        },
+                                        y: {
+                                            type: :integer,
+                                            description: "Y coordinate.",
+                                        },
+                                    },
+                                    required: ["code", "x", "y"],
+                                },
                             },
                         }
                     ],
