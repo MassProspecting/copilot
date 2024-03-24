@@ -608,7 +608,26 @@ module BlackStack
 
         # for internal use only
         def chat(prompt)
+=begin
             # create the new message
+            message_parameters = {
+                role: "user", # Required for manually created messages
+                content: prompt.to_s, # Required.
+            }
+            # Check if the screenshot exists
+            screenshot_path = OPENAI_JARVIS_BROWSING_SCREENSHOT_FILENAME
+            if File.exist?(screenshot_path)
+                # Encode the screenshot in Base64 and include it in the message
+                message_parameters[:attachments] = [{
+                    "type" => "image",
+                    "data" => Base64.encode64(File.open(screenshot_path, "rb").read)
+                }]
+            end
+            mid = @@openai_client.messages.create(
+                thread_id: @@openai_thread_id,
+                parameters: message_parameters
+            )["id"]
+=end
             mid = @@openai_client.messages.create(
                 thread_id: @@openai_thread_id,
                 parameters: {
@@ -616,6 +635,7 @@ module BlackStack
                     content: prompt, # Required.
                 },
             )["id"]
+
             @@openai_message_ids << mid
 
             # run the assistant
