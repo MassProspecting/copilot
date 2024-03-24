@@ -629,10 +629,11 @@ module BlackStack
             )["id"]
 =end
             mid = @@openai_client.messages.create(
-                thread_id: @@openai_thread_id,
-                parameters: {
-                    role: "user", # Required for manually created messages
-                    content: prompt, # Required.
+                'thread_id': @@openai_thread_id,
+                'parameters': {
+                    'role': "user", # Required for manually created messages
+                    'content': prompt, # Required.
+                    #'image_url': 'https://static.vecteezy.com/system/resources/thumbnails/039/391/155/small/500-social-media-stories-v2-abstract-shopping-nft-e-commerce-memories-bundle.png',
                 },
             )["id"]
 
