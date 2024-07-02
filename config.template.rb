@@ -1,5 +1,12 @@
+# Get the API key of OpenAI from the OpenAI platform.
+# Reference: https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key
 OPENAI_API_KEY = 'sk-*****************'
+
+# Choose a model from the list of available models:
+# Reference: https://platform.openai.com/docs/models
 OPENAI_MODEL = 'gpt-4-1106-preview' # 'gpt-3.5-turbo-16k-0613'
+
+
 OPENAI_JARVIS_BROWSING_SCREENSHOT_FILENAME = '/tmp/javis.browsing.screenshot.png' #Any screenshot must be saved in the folder /tmp.
 
 # Integration with other platforms thru an API.
